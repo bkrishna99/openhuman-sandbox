@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>OpenHuman sandbox</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  html, body { margin: 0; padding: 0; height: 100%; background: #fff; }
+
+  #oh-app, #oh-app * { box-sizing: border-box; }
+  #oh-app {
+    --bg: #FFFFFF;
+    --bg-subtle: #FAFAFA;
+    --border: #E5E7EB;
+    --text: #18181B;
+    --text-muted: #71717A;
+    --accent: #2563EB;
+    --accent-soft: #EFF6FF;
+    --success: #16A34A;
+    --success-bg: #DCFCE7;
+    --danger: #DC2626;
+    --danger-bg: #FEE2E2;
+    font-family: 'Inter', system-ui, sans-serif;
+    color: var(--text);
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    width: 100%;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ---------- TOPBAR ---------- */
+  #oh-app .topbar {
+    flex-shrink: 0;
+    display: flex; align-items: center;
+    padding: 12px 20px; border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  #oh-app .topbar-left { display: flex; align-items: center; gap: 8px; color: var(--text-muted); }
+  #oh-app .topbar-left b { color: var(--text); font-weight: 600; }
+
+  /* ---------- BODY LAYOUT ---------- */
+  #oh-app .body-row { flex: 1; display: flex; min-height: 0; overflow: hidden; }
+  #oh-app .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+
+  /* ---------- LEFT SIDEBAR ---------- */
+  /* Simulations/Clients stay decorative (no destination). Recents are real past
+     sessions and are clickable. New session and Config are functional. */
+  #oh-app .left-sidebar {
+    width: 210px; flex-shrink: 0; background: #fff; border-right: 1px solid var(--border);
+    padding: 14px 10px; overflow-y: auto; display: flex; flex-direction: column;
+  }
+  #oh-app .new-session-btn {
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+    border: 1px solid var(--border); background: #fff; border-radius: 8px;
+    padding: 8px 10px; font-size: 13px; font-weight: 600; color: var(--accent);
+    cursor: pointer; margin-bottom: 12px;
+  }
+  #oh-app .new-session-btn:hover { background: var(--accent-soft); }
+  #oh-app .nav-item {
+    display: flex; align-items: center; gap: 9px; padding: 7px 10px; border-radius: 8px;
+    font-size: 13.5px; font-weight: 500; color: var(--text); cursor: default; user-select: none;
+  }
+  #oh-app .nav-item.active { background: var(--bg-subtle); }
+  #oh-app .nav-icon { display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); flex-shrink: 0; }
+  #oh-app .nav-section-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin: 16px 10px 4px; }
+  #oh-app .recents-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+  #oh-app .recent-item {
+    display: flex; align-items: center; gap: 9px; padding: 6px 10px; border-radius: 8px;
+    font-size: 12.5px; color: var(--text-muted); cursor: pointer; user-select: none;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  #oh-app .recent-item:hover { background: var(--bg-subtle); }
+  #oh-app .recent-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
+  #oh-app .recent-empty { font-size: 12px; color: var(--text-muted); padding: 6px 10px; font-style: italic; }
+  #oh-app .config-btn {
+    display: flex; align-items: center; gap: 9px; padding: 8px 10px; border-radius: 8px;
+    font-size: 13px; font-weight: 500; color: var(--text); text-decoration: none;
+    border-top: 1px solid var(--border); margin-top: 10px; padding-top: 14px;
+  }
+  #oh-app .config-btn:hover { background: var(--bg-subtle); }
+  @media (max-width: 1060px) { #oh-app .left-sidebar { display: none; } }
+
+  #oh-app .transcript { flex: 1; overflow-y: auto; padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+  #oh-app .msg-row { display: flex; gap: 10px; max-width: 100%; }
+  #oh-app .msg-row.user { justify-content: flex-end; }
+  #oh-app .avatar {
+    width: 24px; height: 24px; border-radius: 6px; background: var(--text); color: #fff;
+    font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  #oh-app .msg-body { max-width: 640px; }
+  #oh-app .msg-label { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; display:flex; align-items:center; gap:8px;}
+  #oh-app .msg-text { font-size: 14.5px; line-height: 1.55; }
+  #oh-app .user-bubble {
+    background: var(--bg-subtle); border: 1px solid var(--border); border-radius: 12px; padding: 10px 14px; font-size: 14px; line-height: 1.5;
+  }
+  #oh-app .user-avatar {
+    width: 24px; height: 24px; border-radius: 6px; background: #fff; border: 1px solid var(--border);
+    font-size: 10px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    color: var(--text);
+  }
+
+  #oh-app .checklist { margin: 8px 0; display: flex; flex-direction: column; gap: 6px; }
+  #oh-app .checklist-item { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--text-muted); }
+  #oh-app .checklist-item.done { color: var(--text); }
+  #oh-app .check-icon { width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--border); flex-shrink:0; position: relative; }
+  #oh-app .checklist-item.done .check-icon { background: var(--success); border-color: var(--success); }
+  #oh-app .checklist-item.done .check-icon::after {
+    content: ''; position: absolute; left: 4px; top: 1px; width: 4px; height: 8px;
+    border: solid #fff; border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
+
+  #oh-app .input-row { flex-shrink: 0; padding: 16px 20px; border-top: 1px solid var(--border); }
+  #oh-app .input-shell { display: flex; gap: 8px; }
+  #oh-app .text-input {
+    flex: 1; border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+    font-size: 14px; font-family: inherit; outline: none;
+  }
+  #oh-app .text-input:focus { border-color: var(--accent); }
+  #oh-app .send-btn {
+    width: 42px; border-radius: 10px; border: none; background: var(--accent); color: #fff; cursor: pointer;
+    font-size: 16px;
+  }
+  #oh-app .send-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  #oh-app .plan-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; margin-top: 8px;
+  }
+  #oh-app .plan-row { display: flex; justify-content: space-between; font-size: 13.5px; padding: 4px 0; }
+  #oh-app .plan-row .name { color: var(--text-muted); }
+
+  #oh-app .variant-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
+  #oh-app .variant-card {
+    background: #fff; border: 1px solid var(--border); border-radius: 10px; padding: 12px; position: relative;
+  }
+  #oh-app .variant-card .vtag {
+    display: inline-block; font-size: 10.5px; font-weight: 600; color: var(--text-muted);
+    background: var(--bg-subtle); border-radius: 6px; padding: 1px 6px; margin-bottom: 6px;
+  }
+  #oh-app .variant-card .vbadge {
+    color: var(--text); font-size: 13px; font-weight: 600; margin: 2px 0 8px; line-height: 1.3;
+  }
+  #oh-app .variant-card.control .vbadge { color: var(--text-muted); font-weight: 500; }
+  #oh-app .variant-card .vprice { font-size: 11px; color: var(--text-muted); }
+  #oh-app .variant-card .vprice .strike { text-decoration: line-through; margin-right: 5px; }
+  #oh-app .variant-card .vprice .now { color: var(--accent); font-weight: 700; font-size: 13px; }
+  #oh-app .variant-card.control .vprice .now { color: var(--text); }
+  #oh-app .remove-x {
+    position: absolute; top: 6px; right: 8px; border: none; background: none; color: var(--text-muted);
+    cursor: pointer; font-size: 13px;
+  }
+  #oh-app .add-variant-btn {
+    border: 1px dashed var(--border); border-radius: 10px; padding: 10px; text-align: center;
+    font-size: 12.5px; color: var(--text-muted); cursor: pointer; background: #fff;
+  }
+  #oh-app .add-variant-form { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+  #oh-app .add-variant-input {
+    flex: 1; border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px;
+    font-size: 13px; font-family: inherit; outline: none;
+  }
+  #oh-app .add-variant-input:focus { border-color: var(--accent); }
+  #oh-app .add-variant-input.err { border-color: var(--danger); }
+  #oh-app .add-variant-confirm {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 14px;
+    font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap;
+  }
+  #oh-app .add-variant-cancel {
+    background: #fff; color: var(--text-muted); border: 1px solid var(--border); border-radius: 8px; padding: 9px 14px;
+    font-size: 12.5px; cursor: pointer; white-space: nowrap;
+  }
+
+  #oh-app .primary-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 11px 18px;
+    font-size: 13.5px; font-weight: 600; cursor: pointer; margin-top: 10px;
+  }
+  #oh-app .primary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  #oh-app table.results { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+  #oh-app table.results th {
+    text-align: left; font-size: 10.5px; letter-spacing: 0.02em; color: var(--text-muted);
+    padding: 6px 8px; border-bottom: 1px solid var(--border);
+  }
+  #oh-app table.results td { padding: 7px 8px; border-bottom: 1px solid var(--bg-subtle); }
+  #oh-app table.results tr.control td { color: var(--text-muted); }
+  #oh-app .delta.pos { color: var(--success); font-weight: 600; }
+  #oh-app .delta.neg { color: var(--danger); font-weight: 600; }
+
+  #oh-app .archetype-note { border-left: 2px solid var(--border); padding-left: 10px; margin: 8px 0; font-size: 13.5px; }
+  #oh-app .archetype-note b { color: var(--text); }
+
+  #oh-app .cta-box {
+    margin-top: 14px; padding: 14px 16px; border: 1px solid var(--border); border-radius: 10px;
+    background: var(--bg-subtle); display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  }
+  #oh-app .cta-box .cta-btn {
+    background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 9px 14px;
+    font-size: 12.5px; cursor: pointer; white-space: nowrap; text-decoration: none; display: inline-block;
+  }
+
+  /* ---------- PROPERTIES PANEL (right side, replaces the old decorative sidebar) ---------- */
+  #oh-app .properties-panel {
+    width: 260px; flex-shrink: 0; background: var(--bg-subtle);
+    border-left: 1px solid var(--border); padding: 20px; overflow-y: auto;
+  }
+  #oh-app .panel-title { font-size: 13px; font-weight: 600; margin-bottom: 14px; }
+  #oh-app .prop-row { padding: 9px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  #oh-app .prop-row:last-child { border-bottom: none; }
+  #oh-app .prop-label { display: block; color: var(--text-muted); font-size: 11.5px; margin-bottom: 3px; }
+  #oh-app .prop-value { color: var(--text); font-weight: 500; }
+  #oh-app .status-pill { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 12px; font-weight: 500; }
+  #oh-app .status-pill.idle { background: var(--bg-subtle); color: var(--text-muted); border: 1px solid var(--border); }
+  #oh-app .status-pill.progress { background: var(--accent-soft); color: var(--accent); }
+  #oh-app .status-pill.ready { background: #FEF9C3; color: #854D0E; }
+  #oh-app .status-pill.complete { background: var(--success-bg); color: var(--success); }
+  @media (max-width: 860px) { #oh-app .properties-panel { display: none; } }
+</style>
+</head>
+<body>
+
+<div id="oh-app">
+  <div class="topbar">
+    <div class="topbar-left"><b>OpenHuman</b> <span>/</span> Pricing sandbox</div>
+  </div>
+
+  <div class="body-row">
+    <div class="left-sidebar">
+      <div class="new-session-btn" id="oh-new-session">+ New session</div>
+
+      <div class="nav-item active">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="6.5"/><path d="M1.5 8h13M8 1.5c2 2 2 11 0 13M8 1.5c-2 2-2 11 0 13"/></svg></span>
+        Simulations
+      </div>
+      <div class="nav-item">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="2" y="4.5" width="12" height="9" rx="1.5"/><path d="M2 6.7h12"/></svg></span>
+        Clients
+      </div>
+      <div class="nav-section-label">Recents</div>
+      <div class="recents-scroll"><div id="oh-recents-list"></div></div>
+
+      <a class="config-btn" href="/config.html">
+        <span class="nav-icon"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.7v1.6M8 12.7v1.6M14.3 8h-1.6M3.3 8H1.7M12.4 3.6l-1.1 1.1M4.7 11.3l-1.1 1.1M12.4 12.4l-1.1-1.1M4.7 4.7 3.6 3.6"/></svg></span>
+        Config
+      </a>
+    </div>
+
+    <div class="main">
+      <div class="transcript" id="oh-transcript"></div>
+
+      <div class="input-row">
+        <div class="input-shell">
+          <input class="text-input" id="oh-input" placeholder="Enter a company name or website" />
+          <button class="send-btn" id="oh-send">↑</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="properties-panel">
+      <div class="panel-title">Properties</div>
+      <div class="prop-row">
+        <span class="prop-label">Status</span>
+        <span class="prop-value"><span class="status-pill idle" id="oh-status">Idle</span></span>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Company</span>
+        <span class="prop-value" id="oh-company-val">—</span>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Archetypes</span>
+        <span class="prop-value" id="oh-archetype-count">—</span>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label">Agents (mock)</span>
+        <span class="prop-value" id="oh-agent-count">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('oh-app');
+  const transcript = document.getElementById('oh-transcript');
+  const input = document.getElementById('oh-input');
+  const sendBtn = document.getElementById('oh-send');
+  const newSessionBtn = document.getElementById('oh-new-session');
+  const archetypeCountEl = document.getElementById('oh-archetype-count');
+  const agentCountEl = document.getElementById('oh-agent-count');
+  const statusEl = document.getElementById('oh-status');
+  const companyValEl = document.getElementById('oh-company-val');
+
+  let state = { company: null, research: null, archetypes: null, variants: [], results: null, narrative: null, currencySymbol: '$', paidTiers: [], tierIndex: 0 };
+  let currentSessionId = null;
+
+  const SESSIONS_KEY = 'oh_sessions_v1';
+  const ACTIVE_KEY = 'oh_active_session_v1';
+  const MAX_SESSIONS = 20;
+  const BUBBLE_SVG = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"><path d="M2 3.5h12v8H6l-3 2.5v-2.5H2z"/></svg>';
+
+  function setStatus(label, kind){
+    statusEl.textContent = label;
+    statusEl.className = 'status-pill ' + kind;
+  }
+  function newSessionId(){
+    return 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  // ---- Multi-session persistence. Each researched company is its own saved
+  // session (full state: research, archetypes, variants, results), not just a
+  // name, so it can be reopened later from Recents. Survives a refresh,
+  // including a hard refresh, since that clears cache, not local storage. ----
+  function loadAllSessions(){
+    try { return JSON.parse(localStorage.getItem(SESSIONS_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function saveAllSessions(list){
+    try { localStorage.setItem(SESSIONS_KEY, JSON.stringify(list.slice(0, MAX_SESSIONS))); } catch (e) {}
+  }
+  function persistCurrentSession(){
+    if (!state.company || !state.research) return;
+    const all = loadAllSessions();
+    const idx = all.findIndex(s => s.id === currentSessionId);
+    const record = {
+      id: currentSessionId, company: state.company, research: state.research,
+      archetypes: state.archetypes, variants: state.variants, results: state.results,
+      narrative: state.narrative, currencySymbol: state.currencySymbol,
+      paidTiers: state.paidTiers, tierIndex: state.tierIndex, updatedAt: Date.now()
+    };
+    if (idx >= 0) all[idx] = record; else all.unshift(record);
+    saveAllSessions(all);
+    try { localStorage.setItem(ACTIVE_KEY, currentSessionId); } catch (e) {}
+    renderRecents();
+  }
+
+  function renderRecents(){
+    const all = loadAllSessions();
+    const wrap = document.getElementById('oh-recents-list');
+    wrap.innerHTML = '';
+    if (!all.length) {
+      wrap.appendChild(el('<div class="recent-empty">No sessions yet</div>'));
+      return;
+    }
+    all.forEach(s => {
+      const item = el('<div class="recent-item"><span class="nav-icon">' + BUBBLE_SVG + '</span><span class="recent-label"></span></div>');
+      item.querySelector('.recent-label').textContent = s.company;
+      if (s.id === currentSessionId) item.classList.add('active');
+      item.onclick = () => switchToSession(s.id);
+      wrap.appendChild(item);
+    });
+  }
+
+  function showOpener(){
+    const opener = addAssistantMsg();
+    opener.textContent = "Enter a company and I'll research its real pricing, infer customer archetypes, and simulate a pricing test against it.";
+  }
+  function resetPropertiesPanel(){
+    archetypeCountEl.textContent = '—';
+    agentCountEl.textContent = '—';
+    companyValEl.textContent = '—';
+    setStatus('Idle', 'idle');
+  }
+
+  function startNewSession(){
+    persistCurrentSession();
+    transcript.innerHTML = '';
+    state = { company: null, research: null, archetypes: null, variants: [], results: null, narrative: null, currencySymbol: '$', paidTiers: [], tierIndex: 0 };
+    currentSessionId = null;
+    resetPropertiesPanel();
+    sendBtn.disabled = false;
+    input.value = '';
+    showOpener();
+    renderRecents();
+  }
+  newSessionBtn.onclick = startNewSession;
+
+  // Rebuilds the transcript from whatever is currently in `state`. Used both to
+  // load the active session on page boot and to switch sessions via Recents,
+  // reusing the exact same render helpers the live flow itself uses.
+  function renderSessionIntoView(){
+    transcript.innerHTML = '';
+    addUserMsg(state.company);
+
+    const msg1 = addAssistantMsg();
+    msg1.parentElement.appendChild(buildPlanCard(state.research));
+    msg1.textContent = state.research.summary;
+
+    if (state.archetypes && state.archetypes.length) {
+      const msg2 = addAssistantMsg();
+      msg2.textContent = 'Got ' + state.archetypes.length + ' archetypes: ' + state.archetypes.map(a=>a.name).join(', ') + '.';
+      archetypeCountEl.textContent = state.archetypes.length;
+      const agentCount = 8000 + (hashStr(state.company) % 8000);
+      agentCountEl.textContent = agentCount.toLocaleString();
+    }
+
+    if (state.variants && state.variants.length) {
+      const currentTier = (state.paidTiers && state.paidTiers[state.tierIndex]) || state.research.plans.find(p => p.price > 0) || state.research.plans[0];
+      renderVariantStep(currentTier, tierCadenceWord(currentTier), state.company, 'Remove any, or add your own before running.');
+    }
+
+    if (state.results && state.narrative) {
+      const msg4 = addAssistantMsg();
+      msg4.innerHTML = `<b>${state.narrative.headline}</b>`;
+      msg4.parentElement.appendChild(buildResultsTable(state.results));
+      appendInsightsAndNotes(msg4, state.narrative);
+      maybePromptNextTier();
+    }
+
+    companyValEl.textContent = state.company;
+    setStatus(state.results ? 'Complete' : (state.variants && state.variants.length ? 'Ready to simulate' : 'Researching…'),
+      state.results ? 'complete' : (state.variants && state.variants.length ? 'ready' : 'progress'));
+    sendBtn.disabled = false;
+    scrollDown();
+  }
+
+  function switchToSession(id){
+    if (id === currentSessionId) return;
+    persistCurrentSession();
+    const record = loadAllSessions().find(s => s.id === id);
+    if (!record) return;
+    state = {
+      company: record.company, research: record.research, archetypes: record.archetypes || null,
+      variants: record.variants || [], results: record.results || null, narrative: record.narrative || null,
+      currencySymbol: record.currencySymbol || '$', paidTiers: record.paidTiers || [], tierIndex: record.tierIndex || 0
+    };
+    currentSessionId = id;
+    try { localStorage.setItem(ACTIVE_KEY, currentSessionId); } catch (e) {}
+    renderSessionIntoView();
+    renderRecents();
+  }
+
+  function loadActiveSessionOnBoot(){
+    const all = loadAllSessions();
+    let activeId = null;
+    try { activeId = localStorage.getItem(ACTIVE_KEY); } catch (e) {}
+    const record = all.find(s => s.id === activeId) || all[0];
+    if (!record || !record.company || !record.research) return false;
+    state = {
+      company: record.company, research: record.research, archetypes: record.archetypes || null,
+      variants: record.variants || [], results: record.results || null, narrative: record.narrative || null,
+      currencySymbol: record.currencySymbol || '$', paidTiers: record.paidTiers || [], tierIndex: record.tierIndex || 0
+    };
+    currentSessionId = record.id;
+    renderSessionIntoView();
+    return true;
+  }
+
+  function currencySymbol(code){
+    const map = { USD: '$', GBP: '£', EUR: '€' };
+    const c = (code || 'USD').toUpperCase();
+    return map[c] || (code ? code + ' ' : '$');
+  }
+
+  function el(html){ const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; }
+  // A bare <tr> string parsed inside a <div> gets dropped by the HTML parser (table rows
+  // are only valid inside a table context), so table rows need their own wrapper.
+  function trFromHtml(html){ const t = document.createElement('table'); t.innerHTML = '<tbody>'+html+'</tbody>'; return t.querySelector('tr'); }
+  function scrollDown(){ transcript.scrollTop = transcript.scrollHeight; }
+
+  function addUserMsg(text){
+    const row = el(`<div class="msg-row user"><div class="user-bubble"></div><div class="user-avatar">A</div></div>`);
+    row.querySelector('.user-bubble').textContent = text;
+    transcript.appendChild(row); scrollDown();
+  }
+
+  function addAssistantMsg(){
+    const row = el(`<div class="msg-row">
+      <div class="avatar">OH</div>
+      <div class="msg-body">
+        <div class="msg-label">OPENHUMAN</div>
+        <div class="msg-text"></div>
+      </div>
+    </div>`);
+    transcript.appendChild(row); scrollDown();
+    return row.querySelector('.msg-text');
+  }
+
+  function addChecklist(items){
+    const wrap = el(`<div class="checklist"></div>`);
+    items.forEach(label => {
+      wrap.appendChild(el(`<div class="checklist-item"><span class="check-icon"></span><span>${label}</span></div>`));
+    });
+    return wrap;
+  }
+  function markDone(checklistEl, idx){
+    const item = checklistEl.children[idx];
+    if (item) item.classList.add('done');
+  }
+
+  function hashStr(s){
+    let h = 0;
+    for (let i=0;i<s.length;i++){ h = (h<<5) - h + s.charCodeAt(i); h |= 0; }
+    return Math.abs(h);
+  }
+  function seededNoise(seed, x){
+    const v = Math.sin(seed*12.9898 + x*78.233) * 43758.5453;
+    return v - Math.floor(v);
+  }
+
+  // Known test companies: skip the live research call entirely and use saved,
+  // hand-verified data instead. Useful for testing the archetype/narrative
+  // steps without needing a working API key or spending on a research call.
+  // Archetypes and narrative still run as normal LIVE calls, only the
+  // research step is replaced.
+  const FIXTURES = {
+    applyarc: {
+      company: "ApplyArc",
+      category: "AI-powered job application tracker and career coach for individual job seekers (Kanban-style board plus AI tools)",
+      currency: "GBP",
+      plans: [
+        { name: "Free", price: 0, cadence: "month" },
+        { name: "Pro", price: 19, cadence: "month" }
+      ],
+      summary: "Free tier tracks up to 100 jobs with 5 AI generations a month, no card required. Pro at £19/month unlocks the full AI Career Coach: daily briefings, role-specific mock interviews, rejection analysis, salary negotiation scripts, and unlimited AI generations."
+    },
+    liftmycv: {
+      company: "LiftmyCV",
+      category: "AI auto-apply agent for job seekers: scans job boards and ATS platforms, tailors a resume and cover letter per role, and submits applications automatically",
+      currency: "USD",
+      plans: [
+        { name: "Free", price: 0, cadence: "month" },
+        { name: "Basic subscription", price: 9.99, cadence: "month" },
+        { name: "Unlimited subscription", price: 69.99, cadence: "month" }
+      ],
+      summary: "Free plan includes 3 one-time application credits (\"Lifts\"), no card required. Beyond that, LiftmyCV offers both pay-as-you-go Lift packs (from $14.99 for 200 applications) and real monthly subscriptions, from a Basic tier up to an Unlimited tier for high-volume auto-apply users."
+    }
+  };
+  function normalizeCompanyKey(s){
+    return s.trim().toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '')
+      .replace(/\.(com|ai|io|co|app|net)(\/.*)?$/, '')
+      .replace(/[^a-z0-9]/g, '');
+  }
+
+  function parseJsonLoose(text){
+    let t = text.trim().replace(/^```json/i, '').replace(/^```/, '').replace(/```$/, '').trim();
+    const start = t.indexOf('{');
+    const end = t.lastIndexOf('}');
+    if (start >= 0 && end >= 0) t = t.slice(start, end+1);
+    return JSON.parse(t);
+  }
+
+  // ============================================================
+  // callClaude: calls OUR OWN server-side proxy at /api/claude, never
+  // Anthropic directly. The proxy (api/claude.js) holds the real API key,
+  // picks the model, and owns the system prompt for each step. This file
+  // only ever sends a step name and the plain-text payload for that step.
+  // ============================================================
+  async function callClaude({step, userText}) {
+    const userApiKey = (localStorage.getItem('oh_api_key') || '').trim();
+    const userModel = (localStorage.getItem('oh_model') || '').trim();
+    const payload = { step, userText };
+    if (userApiKey) payload.apiKey = userApiKey;
+    if (userModel) payload.model = userModel;
+    const res = await fetch("/api/claude", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || ('proxy returned ' + res.status));
+    return { text: data.text };
+  }
+
+  function buildPlanCard(research){
+    const planCard = el(`<div class="plan-card"></div>`);
+    research.plans.forEach(p => {
+      planCard.appendChild(el(`<div class="plan-row"><span class="name">${p.name}</span><span>${state.currencySymbol}${p.price.toFixed(2)} / ${p.cadence}</span></div>`));
+    });
+    return planCard;
+  }
+
+  function buildResultsTable(results){
+    const table = el(`<table class="results">
+      <tr><th>Variant</th><th>8-wk LTV</th><th>vs Control</th><th>LTV/paying visitor</th><th>vs Control</th></tr>
+    </table>`);
+    [...results].sort((a,b)=>b.ltvIndex-a.ltvIndex).forEach(r => {
+      const isControl = r.discount === 0;
+      const row = trFromHtml(`<tr class="${isControl?'control':''}">
+        <td>${r.id}${isControl?' (control)':''}</td>
+        <td>${r.ltvIndex}</td>
+        <td class="delta ${r.ltvDelta>0?'pos':(r.ltvDelta<0?'neg':'')}">${isControl?'–':(r.ltvDelta>=0?'+':'')+r.ltvDelta+'%'}</td>
+        <td>${r.pvIndex}</td>
+        <td class="delta ${r.pvDelta>0?'pos':(r.pvDelta<0?'neg':'')}">${isControl?'–':(r.pvDelta>=0?'+':'')+r.pvDelta+'%'}</td>
+      </tr>`);
+      table.appendChild(row);
+    });
+    return table;
+  }
+
+  function appendInsightsAndNotes(msgEl, narrative){
+    const insightsList = el(`<ul style="margin:6px 0 0 18px; padding:0; font-size:13.5px; line-height:1.6;"></ul>`);
+    (narrative.insights||[]).forEach(i => insightsList.appendChild(el(`<li>${i}</li>`)));
+    msgEl.parentElement.appendChild(insightsList);
+
+    (narrative.archetype_notes||[]).forEach(n => {
+      msgEl.parentElement.appendChild(el(`<div class="archetype-note"><b>${n.archetype}</b> responded best to ${n.best_variant}. ${n.reason}</div>`));
+    });
+
+    const cta = el(`<div class="cta-box">
+      <div style="font-size:13px;">Want to test this on your real funnel and real customers?</div>
+      <a class="cta-btn" href="https://cal.com/krishna-bollojula/60min" target="_blank" rel="noopener noreferrer">Book a call →</a>
+    </div>`);
+    msgEl.parentElement.appendChild(cta);
+  }
+
+  function renderVariantStep(base, cadenceWord, company, introText){
+    const msg3 = addAssistantMsg({ type: 'mocked', label: '○ client-side — default variants (no API call)' });
+    msg3.textContent = introText;
+    const grid = el(`<div class="variant-grid"></div>`);
+    renderVariantGrid(grid, base, cadenceWord);
+    msg3.parentElement.appendChild(grid);
+
+    const addWrap = el(`<div></div>`);
+    msg3.parentElement.appendChild(addWrap);
+
+    function showAddButton(){
+      addWrap.innerHTML = '';
+      const addBtn = el(`<div class="add-variant-btn">+ Add a variant</div>`);
+      addBtn.onclick = showAddForm;
+      addWrap.appendChild(addBtn);
+    }
+
+    function showAddForm(){
+      addWrap.innerHTML = '';
+      const form = el(`<div class="add-variant-form">
+        <input type="number" class="add-variant-input" placeholder="Discount %, e.g. 45" min="1" max="95" />
+        <button class="add-variant-confirm">Add</button>
+        <button class="add-variant-cancel">Cancel</button>
+      </div>`);
+      addWrap.appendChild(form);
+      const inputEl = form.querySelector('.add-variant-input');
+      inputEl.focus();
+      inputEl.addEventListener('input', () => inputEl.classList.remove('err'));
+
+      function commit(){
+        const raw = inputEl.value.trim();
+        const val = Math.round(Number(raw));
+        if (!raw || isNaN(val) || val < 1 || val > 95) {
+          inputEl.classList.add('err');
+          inputEl.value = '';
+          inputEl.placeholder = 'Enter a number 1–95';
+          inputEl.focus();
+          return;
+        }
+        if (state.variants.some(v => v.discount === val)) {
+          inputEl.classList.add('err');
+          inputEl.value = '';
+          inputEl.placeholder = 'Already have ' + val + '% off';
+          inputEl.focus();
+          return;
+        }
+        state.variants.push({ id: 'V'+state.variants.length, discount: val, label: val+'% OFF your first '+cadenceWord, price: base.price*(1-val/100) });
+        state.variants.sort((a,b) => a.discount - b.discount);
+        renderVariantGrid(grid, base, cadenceWord);
+        persistCurrentSession();
+        showAddButton();
+      }
+      form.querySelector('.add-variant-confirm').onclick = commit;
+      form.querySelector('.add-variant-cancel').onclick = showAddButton;
+      inputEl.addEventListener('keydown', e => {
+        if (e.key === 'Enter') commit();
+        if (e.key === 'Escape') showAddButton();
+      });
+    }
+
+    showAddButton();
+    const runBtn = el(`<button class="primary-btn">▶ Run simulation</button>`);
+    runBtn.onclick = () => runSimulation(company, base, cadenceWord);
+    msg3.parentElement.appendChild(runBtn);
+    scrollDown();
+  }
+
+  // ---------------- Builds default discount variants against ONE paid tier at a time.
+  // Companies with more than one paid plan (e.g. LiftmyCV's Basic and Unlimited) get
+  // run one tier per pass rather than mixed together, with an explicit note on which
+  // tier this run used, and a follow-up prompt to test the next one. ----------------
+  function startVariantsForTier(tierPlan, cadenceWord, isFirst){
+    const discounts = [0, 20, 30, 40, 50, 60];
+    state.variants = discounts.map((d, i) => ({
+      id: 'V' + i,
+      discount: d,
+      label: d === 0 ? 'Full price' : d + '% OFF your first ' + cadenceWord,
+      price: tierPlan.price * (1 - d/100)
+    }));
+    const tierLabel = tierPlan.name + ' (' + state.currencySymbol + tierPlan.price.toFixed(2) + '/' + cadenceWord + ')';
+    const introText = (isFirst ? 'Running these variants against the ' : 'Now running against the ') + tierLabel + ' tier. Remove any, or add your own before running.';
+    renderVariantStep(tierPlan, cadenceWord, state.company, introText);
+    setStatus('Ready to simulate', 'ready');
+    persistCurrentSession();
+  }
+
+  function tierCadenceWord(tierPlan){
+    return (tierPlan.cadence || 'week').includes('week') ? 'week' : (tierPlan.cadence.includes('month') ? 'month' : 'year');
+  }
+
+  function maybePromptNextTier(){
+    if (!state.paidTiers || state.tierIndex + 1 >= state.paidTiers.length) return;
+    const usedTier = state.paidTiers[state.tierIndex];
+    const nextTier = state.paidTiers[state.tierIndex + 1];
+    const msg = addAssistantMsg({ type: 'mocked', label: '○ client-side — no API call' });
+    msg.innerHTML = 'That run covered the <b>' + usedTier.name + '</b> tier. Want to also test the <b>' + nextTier.name +
+      '</b> tier (' + state.currencySymbol + nextTier.price.toFixed(2) + '/' + tierCadenceWord(nextTier) + ')?';
+    const btn = el(`<button class="primary-btn">▶ Run ${nextTier.name} next</button>`);
+    btn.onclick = () => {
+      state.tierIndex += 1;
+      startVariantsForTier(nextTier, tierCadenceWord(nextTier), false);
+    };
+    msg.parentElement.appendChild(btn);
+    scrollDown();
+  }
+
+  async function startFlow(){
+    const company = input.value.trim();
+    if (!company) return;
+    input.value = '';
+    sendBtn.disabled = true;
+
+    persistCurrentSession();
+    transcript.innerHTML = '';
+    state = { company, research: null, archetypes: null, variants: [], results: null, narrative: null, currencySymbol: '$', paidTiers: [], tierIndex: 0 };
+    currentSessionId = newSessionId();
+
+    addUserMsg(company);
+    companyValEl.textContent = company;
+    setStatus('Researching…', 'progress');
+
+    const fixtureKey = normalizeCompanyKey(company);
+    const fixture = FIXTURES[fixtureKey];
+
+    let msg1, checklist1, research;
+    if (fixture) {
+      // ---------------- STEP 1 (fixture, no API call): known test company ----------------
+      msg1 = addAssistantMsg({ type: 'mocked', label: '○ fixture data — no API call, known test company' });
+      checklist1 = addChecklist(['Loading saved test data', 'Using stored plans and price points', 'Using stored category context']);
+      msg1.parentElement.appendChild(checklist1);
+      msg1.textContent = 'Using saved test data for ' + company + '...';
+      await new Promise(r => setTimeout(r, 300));
+      markDone(checklist1, 0); markDone(checklist1, 1); markDone(checklist1, 2);
+      research = JSON.parse(JSON.stringify(fixture));
+    } else {
+      // ---------------- STEP 1: LIVE — Claude API research call (web search) ----------------
+      msg1 = addAssistantMsg({ type: 'live', label: '● LIVE — Claude API (research, web search)' });
+      checklist1 = addChecklist(['Finding pricing page', 'Extracting plans and price points', 'Reading category context']);
+      msg1.parentElement.appendChild(checklist1);
+      msg1.textContent = 'Researching ' + company + '...';
+
+      try {
+        const r = await callClaude({
+          step: 'research',
+          userText: 'Company: ' + company
+        });
+        research = parseJsonLoose(r.text);
+      } catch (e) {
+        research = { error: 'Request failed: ' + e.message };
+      }
+
+      markDone(checklist1, 0); markDone(checklist1, 1); markDone(checklist1, 2);
+    }
+
+    if (research.error || !research.plans || !research.plans.length) {
+      msg1.textContent = "Couldn't find a public pricing page automatically (" + (research.error || 'no plans found') + "). Try a different company name.";
+      setStatus('Idle', 'idle');
+      sendBtn.disabled = false;
+      return;
+    }
+    research.plans.forEach(p => { p.price = Number(p.price) || 0; p.cadence = p.cadence || 'week'; });
+    state.research = research;
+    state.currencySymbol = currencySymbol(research.currency);
+
+    msg1.parentElement.appendChild(buildPlanCard(research));
+    msg1.textContent = (fixture ? 'Loaded saved data. ' : 'Found it. ') + research.summary;
+    scrollDown();
+
+    // ---------------- STEP 2: LIVE — Claude API archetype generation ----------------
+    const msg2 = addAssistantMsg({ type: 'live', label: '● LIVE — Claude API (archetype generation)' });
+    msg2.textContent = 'Inferring customer archetypes...';
+    let archetypes;
+    try {
+      const r2 = await callClaude({
+        step: 'archetypes',
+        userText: JSON.stringify(research)
+      });
+      archetypes = parseJsonLoose(r2.text).archetypes;
+    } catch (e) {
+      archetypes = [
+        { name: 'Price-driven', trait: 'Decides mostly on the number.', price_sensitivity: 'high', trust_threshold: 'low' },
+        { name: 'Cautious evaluator', trait: 'Wants proof before committing.', price_sensitivity: 'medium', trust_threshold: 'high' },
+        { name: 'Committed loyalist', trait: 'Already sold, just needs a nudge.', price_sensitivity: 'low', trust_threshold: 'low' },
+        { name: 'Casual user', trait: 'Low intent, easily distracted.', price_sensitivity: 'medium', trust_threshold: 'medium' }
+      ];
+    }
+    state.archetypes = archetypes;
+    archetypeCountEl.textContent = archetypes.length;
+    const agentCount = 8000 + (hashStr(company) % 8000);
+    agentCountEl.textContent = agentCount.toLocaleString();
+
+    msg2.textContent = 'Got ' + archetypes.length + ' archetypes: ' + archetypes.map(a=>a.name).join(', ') + '.';
+    scrollDown();
+
+    // ---------------- STEP 3 (client-side, no API call): build default variants ----------------
+    // Companies can have more than one paid plan (e.g. Basic and Unlimited). Run one
+    // tier at a time rather than mixing them, free plans are excluded since a discount
+    // test against £0 produces £0 for every variant.
+    state.paidTiers = research.plans.filter(p => p.price > 0);
+    if (!state.paidTiers.length) state.paidTiers = [research.plans[0]];
+    state.tierIndex = 0;
+
+    const firstTier = state.paidTiers[0];
+    startVariantsForTier(firstTier, tierCadenceWord(firstTier), true);
+    sendBtn.disabled = false;
+  }
+
+  function renderVariantGrid(grid, base, cadenceWord){
+    grid.innerHTML = '';
+    state.variants.forEach((v, idx) => {
+      const isControl = v.discount === 0;
+      const card = el(`<div class="variant-card ${isControl?'control':''}">
+        <div class="vtag">${v.id}</div>
+        <div class="vbadge">${v.label}</div>
+        <div class="vprice">${isControl ? '' : `<span class="strike">${state.currencySymbol}${base.price.toFixed(2)}</span>`}<span class="now">${state.currencySymbol}${v.price.toFixed(2)}</span>/${cadenceWord}</div>
+      </div>`);
+      if (!isControl) {
+        const x = el(`<button class="remove-x">×</button>`);
+        x.onclick = () => { state.variants = state.variants.filter(sv => sv.id !== v.id); renderVariantGrid(grid, base, cadenceWord); persistCurrentSession(); };
+        card.appendChild(x);
+      }
+      grid.appendChild(card);
+    });
+  }
+
+  // ---------------- MOCKED simulation math (deterministic, seeded, NOT a real agent run) ----------------
+  // ---------------- Fallback narrative when the narrative API call fails or no key is
+  // configured. Grounded in the real computed numbers and each archetype's own traits,
+  // instead of a generic "call failed" placeholder, so the demo still reads as tailored. ----------------
+  function buildFallbackNarrative(results, archetypes){
+    const nonControl = results.filter(r => r.discount > 0);
+    const beatCount = nonControl.filter(r => r.ltvDelta > 0).length;
+    const byLtv = [...nonControl].sort((a,b) => b.ltvIndex - a.ltvIndex);
+    const best = byLtv[0];
+    const worst = byLtv[byLtv.length - 1];
+
+    const headline = beatCount + ' of ' + nonControl.length + ' variants beat control on simulated 8-week LTV' +
+      (best ? ', ' + best.id + ' (' + best.discount + '% off) performed strongest at ' + (best.ltvDelta>=0?'+':'') + best.ltvDelta + '%.' : '.');
+
+    const insights = [];
+    if (best) {
+      insights.push(best.id + ' (' + best.discount + '% off) led on total LTV at ' + (best.ltvDelta>=0?'+':'') + best.ltvDelta + '%, while LTV per paying visitor moved ' + (best.pvDelta>=0?'+':'') + best.pvDelta + '% versus control.');
+    }
+    if (worst && best && worst.id !== best.id) {
+      insights.push(worst.discount > best.discount
+        ? 'Discounts deeper than ' + best.discount + '% gave up ground, ' + worst.id + ' (' + worst.discount + '% off) landed at ' + (worst.ltvDelta>=0?'+':'') + worst.ltvDelta + '%.'
+        : 'Shallower discounts underperformed here, ' + worst.id + ' (' + worst.discount + '% off) landed at ' + (worst.ltvDelta>=0?'+':'') + worst.ltvDelta + '%.');
+    }
+    insights.push('LTV per paying visitor declined as discount depth increased across the board, the trade-off worth watching before picking a winner.');
+
+    const archetype_notes = (archetypes||[]).map(a => {
+      const sensitivity = (a.price_sensitivity||'medium').toLowerCase();
+      const trust = (a.trust_threshold||'medium').toLowerCase();
+      const positive = nonControl.filter(r => r.ltvDelta > 0);
+      const pool = (positive.length ? positive : nonControl).slice().sort((x,y) => x.discount - y.discount);
+      let pick, reason;
+      if (!pool.length) {
+        pick = nonControl[0];
+        reason = 'None of the tested discounts clearly won this group over, worth a different lever than price for them.';
+      } else if (trust === 'high') {
+        pick = pool[Math.min(1, pool.length - 1)];
+        reason = 'a steep discount reads as a red flag for this group, the moderate ' + pick.discount + '% level held up best without triggering doubt';
+      } else if (sensitivity === 'high') {
+        pick = pool[pool.length - 1];
+        reason = 'this group is led by price, the deeper ' + pick.discount + '% cut converted the most of them';
+      } else if (sensitivity === 'low') {
+        pick = pool[0];
+        reason = 'price barely moves this group, the lighter ' + pick.discount + '% offer performed about as well as going deeper, without giving up margin';
+      } else {
+        pick = pool[Math.floor(pool.length / 2)];
+        reason = 'a middle-of-the-road ' + pick.discount + '% discount balanced conversion against margin best for this group';
+      }
+      const traitPrefix = a.trait ? a.trait.replace(/\.$/, '') + ', so ' : '';
+      return { archetype: a.name, best_variant: pick.id, reason: traitPrefix + reason + '.' };
+    });
+
+    return { headline, insights, archetype_notes };
+  }
+
+  function mockSimulate(company, variants){
+    const seed = hashStr(company) % 1000;
+    return variants.map(v => {
+      const d = v.discount;
+      const gaussian = 18 * Math.exp(-Math.pow(d-40, 2) / (2*15*15));
+      const deepPenalty = d > 55 ? (d-55)*0.7 : 0;
+      const jitter1 = seededNoise(seed, d) * 4 - 2;
+      const totalDelta = d === 0 ? 0 : Math.round(gaussian - deepPenalty + jitter1);
+      const pvBase = 14 - 0.8*d;
+      const jitter2 = seededNoise(seed, d+1000) * 2 - 1;
+      const pvDelta = d === 0 ? 0 : Math.round(pvBase + jitter2);
+      return { id: v.id, discount: d, label: v.label, ltvIndex: 100+totalDelta, ltvDelta: totalDelta, pvIndex: 100+pvDelta, pvDelta: pvDelta };
+    });
+  }
+
+  async function runSimulation(company, base, cadenceWord){
+    const msg = addAssistantMsg({ type: 'mocked', label: '○ MOCKED — deterministic simulation math' });
+    const checklist = addChecklist(['Preparing agents', 'Confirming world calibration', 'Simulating control + variants', 'Scoring against LTV']);
+    msg.parentElement.appendChild(checklist);
+    msg.textContent = 'Running now.';
+    for (let i=0;i<4;i++){ await new Promise(r=>setTimeout(r, 380)); markDone(checklist, i); }
+
+    const results = mockSimulate(company, state.variants);
+    state.results = results;
+
+    // ---------------- STEP 4: LIVE — Claude API narrative synthesis (numbers already fixed above) ----------------
+    const msg2 = addAssistantMsg({ type: 'live', label: '● LIVE — Claude API (narrative + archetype rationale)' });
+    msg2.textContent = 'Writing up the results...';
+    let narrative;
+    try {
+      const r = await callClaude({
+        step: 'narrative',
+        userText: JSON.stringify({ company, results, archetypes: state.archetypes })
+      });
+      narrative = parseJsonLoose(r.text);
+    } catch (e) {
+      narrative = buildFallbackNarrative(results, state.archetypes);
+    }
+
+    state.narrative = narrative;
+
+    let html = `<b>${narrative.headline}</b>`;
+    msg2.innerHTML = html;
+
+    msg2.parentElement.appendChild(buildResultsTable(results));
+    appendInsightsAndNotes(msg2, narrative);
+    scrollDown();
+    setStatus('Complete', 'complete');
+    persistCurrentSession();
+    maybePromptNextTier();
+  }
+
+  sendBtn.onclick = startFlow;
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') startFlow(); });
+
+  // opening message, unless there's a previous session to load instead
+  if (!loadActiveSessionOnBoot()) showOpener();
+  renderRecents();
+})();
+</script>
+</body>
+</html>

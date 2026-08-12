@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex" />
+<title>Settings — OpenHuman sandbox</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: #FAFAFA; font-family: 'Inter', system-ui, sans-serif; color: #18181B;
+  }
+  .card { width: 480px; max-width: 92vw; background: #fff; border: 1px solid #E5E7EB; border-radius: 12px; padding: 28px; }
+  .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: #71717A; }
+  h1 { font-size: 18px; margin: 6px 0 4px; }
+  .sub { font-size: 13px; color: #71717A; margin: 0 0 20px; line-height: 1.5; }
+  .sub code { background: #FAFAFA; padding: 1px 4px; border-radius: 4px; font-size: 12px; }
+  label { display: block; font-size: 12px; font-weight: 600; margin: 16px 0 6px; }
+  input {
+    width: 100%; border: 1px solid #E5E7EB; border-radius: 8px; padding: 10px 12px; font-size: 13.5px;
+    font-family: inherit; outline: none;
+  }
+  input:focus { border-color: #2563EB; }
+  .row { display: flex; gap: 10px; margin-top: 20px; }
+  button {
+    border: none; border-radius: 8px; padding: 10px 16px; font-size: 13px; font-weight: 600; cursor: pointer;
+  }
+  .save { background: #2563EB; color: #fff; flex: 1; }
+  .clear { background: #FAFAFA; color: #18181B; border: 1px solid #E5E7EB; }
+  .status { margin-top: 14px; font-size: 12.5px; padding: 10px 12px; border-radius: 8px; }
+  .status.saved { background: #DCFCE7; color: #16A34A; }
+  .status.empty { background: #FAFAFA; color: #71717A; border: 1px solid #E5E7EB; }
+  .note { font-size: 11.5px; color: #71717A; line-height: 1.6; margin-top: 18px; border-top: 1px solid #E5E7EB; padding-top: 14px; }
+  .note b { color: #18181B; }
+  .note code { background: #FAFAFA; padding: 1px 4px; border-radius: 4px; font-size: 11px; }
+  a.back { display: inline-block; margin-top: 18px; font-size: 12.5px; color: #71717A; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="eyebrow">OpenHuman sandbox</div>
+    <h1>Settings</h1>
+    <p class="sub">Optional. Saving a key here uses it only in this browser, for this browser's requests. Leave this empty to use the server's default <code>ANTHROPIC_API_KEY</code> instead.</p>
+
+    <label for="key">Anthropic API key</label>
+    <input id="key" type="password" placeholder="sk-ant-..." autocomplete="off" />
+
+    <label for="model">Model override (optional)</label>
+    <input id="model" type="text" placeholder="claude-sonnet-5" autocomplete="off" />
+
+    <div class="row">
+      <button class="save" id="saveBtn">Save to this browser</button>
+      <button class="clear" id="clearBtn">Clear</button>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <div class="note">
+      <b>Where this goes:</b> saved values live only in this browser's local storage. They are sent to our own <code>/api/claude</code> endpoint with each request and used for that one call, never logged or stored on the server. Anyone else opening this demo, on their own browser, will still use the server's own key unless they set their own here.
+    </div>
+
+    <a class="back" href="/">← Back to the demo</a>
+  </div>
+
+<script>
+  const keyInput = document.getElementById('key');
+  const modelInput = document.getElementById('model');
+  const statusEl = document.getElementById('status');
+  const saveBtn = document.getElementById('saveBtn');
+  const clearBtn = document.getElementById('clearBtn');
+
+  function refreshStatus(){
+    const savedKey = localStorage.getItem('oh_api_key') || '';
+    if (savedKey) {
+      statusEl.className = 'status saved';
+      statusEl.textContent = 'A key is saved in this browser (ending in ' + savedKey.slice(-4) + '). Requests from this browser will use it.';
+    } else {
+      statusEl.className = 'status empty';
+      statusEl.textContent = 'No key saved here. Requests from this browser will use the server default, if one is configured.';
+    }
+  }
+
+  keyInput.value = localStorage.getItem('oh_api_key') || '';
+  modelInput.value = localStorage.getItem('oh_model') || '';
+  refreshStatus();
+
+  saveBtn.onclick = () => {
+    const k = keyInput.value.trim();
+    const m = modelInput.value.trim();
+    if (k) localStorage.setItem('oh_api_key', k); else localStorage.removeItem('oh_api_key');
+    if (m) localStorage.setItem('oh_model', m); else localStorage.removeItem('oh_model');
+    refreshStatus();
+  };
+
+  clearBtn.onclick = () => {
+    localStorage.removeItem('oh_api_key');
+    localStorage.removeItem('oh_model');
+    keyInput.value = '';
+    modelInput.value = '';
+    refreshStatus();
+  };
+</script>
+</body>
+</html>
